@@ -1,6 +1,7 @@
 #pragma once
-#include <cstddef>
+#include "pch.h"
 
+#define ALLOCATING_DEBUG true
 
 __declspec(novtable) class Allocator
 {

@@ -27,6 +27,9 @@
     <ClInclude Include="AllocatorStack.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AllocatorPool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -42,6 +45,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AllocatorStack.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AllocatorPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

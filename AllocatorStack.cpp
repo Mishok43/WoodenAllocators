@@ -1,30 +1,29 @@
 #include "AllocatorStack.h"
-#include <cstdlib>
-#include <assert.h>
 
 
-template<bool safe>
-AllocatorStack<safe>::AllocatorStack(const std::size_t totalSize) :
-	Allocator(totalSize)
-{
-}
+AllocatorStack::AllocatorStack(const size_t totalSize, const size_t numChunksMax) :
+	Allocator(totalSize), numChunksMax(numChunksMax)
+{}
 
-template<bool safe>
-void AllocatorStack<safe>::init()
+
+void AllocatorStack::init()
 {
 	beginPtr = malloc(sizeTotal);
+	sizeData = aligned_alloc(sizeof(uint32_t), numChunksMax*sizeof(uint32_t));
+
+#if ALLOCATING_DEBUG
+	std::memset(beginPtr, 0, sizeTotal);
+	std::memset(sizeData, 0, numChunksMax * sizeof(uint32_t));
+#endif 
+
 	reset();
 }
 
 
-template<bool safe>
-void* AllocatorStack<safe>::allocate(const std::size_t size, const std::size_t alignment /* = 0*/)
+
+void* AllocatorStack::allocate(const size_t size, const size_t alignment /* = 0*/)
 {
-	std::size_t padding = (alignment > 0) ? alignment - (uintptr_t)(curPtr)& alignment : 0; // use bitwise and operator for fast mode, because alignment should be power of 2 
-	if (padding < HEADER_SIZE)
-	{
-		padding += HEADER_SIZE - padding;
-	}
+	size_t padding = (alignment > 0) ? alignment - (uintptr_t)(curPtr)& alignment : 0; // use bitwise and operator for fast mode, because alignment should be power of 2 
 
 	if ((uintptr_t)(curPtr)+padding + size > (uintptr_t)(beginPtr)+sizeUsed)
 	{
@@ -35,25 +34,64 @@ void* AllocatorStack<safe>::allocate(const std::size_t size, const std::size_t a
 	curPtr = (void*)(nextPtr + size);
 	sizeUsed += padding + size;
 
+	sizeData[numChunks++] = padding + size;
+
+
 	return (void*)nextPtr;
 }
 
-template<bool safe>
-void AllocatorStack<safe>::free(void* ptr)
-{
-	if (safe)
-	{
 
-	}
-	else
-	{
-		curPtr -= 
-	}
+void AllocatorStack::free(void* ptr)
+{
+#if ALLOCATING_DEBUG
+	assert(numChunks > 0 && "stack must be not empty!");
+	--numChunks;
+	uint32_t totalSize = sizeData[numChunks];
+
+	assert(totalSize > sizeUsed);
+	assert(totalSize >= (uintptr_t)curPtr - (uintptr_t)ptr);
+		
+	uint32_t padding = totalSize - (uintptr_t)curPtr - (uintptr_t)ptr;
+
+	curPtr = (void*)((uintptr_t)ptr - padding);
+	sizeUsed -= totalSize;
+
+	std::memset(curPtr, 0, totalSize);
+	sizeData[numChunks] = 0;
+#else
+	--numChunks;
+	uint32_t totalSize = sizeData[numChunks];
+	uint32_t padding =  totalSize - (uintptr_t)curPtr - (uintptr_t)ptr;
+	curPtr = (void*)((uintptr_t)ptr-padding);
+	sizeUsed -= totalSize;
+#endif
 }
 
-template<bool safe>
-void AllocatorStack<safe>::reset()
+
+void AllocatorStack::reset()
 {
 	curPtr = beginPtr;
 	sizeUsed = 0;
+	numChunks = 0;
+}
+
+
+AllocatorStack::~AllocatorStack()
+{
+#if ALLOCATING_DEBUG
+	for (size_t i = 0; i < sizeTotal; ++i)
+	{
+		assert(((char*)beginPtr)[i] == 0);
+	}
+
+	for (size_t i = 0; i < numChunksMax; ++i)
+	{
+		assert(sizeData[i] == 0);
+	}
+
+	assert(curPtr == beginPtr);
+#endif
+
+	free(beginPtr);
+	free(sizeData);
 }

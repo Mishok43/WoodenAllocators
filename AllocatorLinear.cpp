@@ -39,3 +39,8 @@ void AllocatorLinear::reset()
 	curPtr = beginPtr;
 	sizeUsed = 0;
 }
+
+AllocatorLinear::~AllocatorLinear()
+{
+	free(beginPtr);
+}
