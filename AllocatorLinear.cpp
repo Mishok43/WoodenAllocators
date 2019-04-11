@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <assert.h>
 
-AllocatorLinear::AllocatorLinear(const std::size_t totalSize):
+AllocatorLinear::AllocatorLinear(const size_t totalSize):
 	Allocator(totalSize)
 {
 }
@@ -13,9 +13,9 @@ void AllocatorLinear::init()
 	reset();
 }
 
-void* AllocatorLinear::allocate(const std::size_t size, const std::size_t alignment /* = 0*/)
+void* AllocatorLinear::allocate(const size_t size, const size_t alignment /* = 0*/)
 {
-	std::size_t padding = (alignment > 0 ) ? alignment - (uintptr_t)(curPtr) & alignment : 0; // use bitwise and operator for fast mode, because alignment should be power of 2 
+	size_t padding = (alignment > 0 ) ? alignment - (uintptr_t)(curPtr) & alignment : 0; // use bitwise and operator for fast mode, because alignment should be power of 2 
 	
 	if ((uintptr_t)(curPtr) + padding + size > (uintptr_t)(beginPtr) + sizeUsed)
 	{

@@ -11,11 +11,6 @@ void AllocatorStack::init()
 	beginPtr = malloc(sizeTotal);
 	sizeData = aligned_alloc(sizeof(uint32_t), numChunksMax*sizeof(uint32_t));
 
-#if ALLOCATING_DEBUG
-	std::memset(beginPtr, 0, sizeTotal);
-	std::memset(sizeData, 0, numChunksMax * sizeof(uint32_t));
-#endif 
-
 	reset();
 }
 
@@ -36,7 +31,6 @@ void* AllocatorStack::allocate(const size_t size, const size_t alignment /* = 0*
 
 	sizeData[numChunks++] = padding + size;
 
-
 	return (void*)nextPtr;
 }
 
@@ -45,6 +39,7 @@ void AllocatorStack::free(void* ptr)
 {
 #if ALLOCATING_DEBUG
 	assert(numChunks > 0 && "stack must be not empty!");
+
 	--numChunks;
 	uint32_t totalSize = sizeData[numChunks];
 
@@ -54,10 +49,12 @@ void AllocatorStack::free(void* ptr)
 	uint32_t padding = totalSize - (uintptr_t)curPtr - (uintptr_t)ptr;
 
 	curPtr = (void*)((uintptr_t)ptr - padding);
+	assert(!hasOnlyDebugValue(curPtr, totalSize), "Attempt to free deleted block yet");
+
 	sizeUsed -= totalSize;
 
-	std::memset(curPtr, 0, totalSize);
-	sizeData[numChunks] = 0;
+	setDebugValue(curPtr, totalSize);
+	setDebugValue(sizeData+numChunks, sizeof(uint32_t));
 #else
 	--numChunks;
 	uint32_t totalSize = sizeData[numChunks];
@@ -73,22 +70,17 @@ void AllocatorStack::reset()
 	curPtr = beginPtr;
 	sizeUsed = 0;
 	numChunks = 0;
+
+#if ALLOCATING_DEBUG
+	setDebugValue(beginPtr, sizeTotal);
+	setDebugValue(sizeData, numChunksMax * sizeof(uint32_t));
+#endif 
 }
 
 
 AllocatorStack::~AllocatorStack()
 {
 #if ALLOCATING_DEBUG
-	for (size_t i = 0; i < sizeTotal; ++i)
-	{
-		assert(((char*)beginPtr)[i] == 0);
-	}
-
-	for (size_t i = 0; i < numChunksMax; ++i)
-	{
-		assert(sizeData[i] == 0);
-	}
-
 	assert(curPtr == beginPtr);
 #endif
 

@@ -6,12 +6,12 @@
 class AllocatorLinear : public Allocator
 {
 public:
-	AllocatorLinear(const std::size_t totalSize);
+	AllocatorLinear(const size_t totalSize);
 	~AllocatorLinear();
 
 	void init() override;
 
-	void* allocate(const std::size_t size, const std::size_t alignment = 0) override;
+	void* allocate(const size_t size, const size_t alignment = 0) override;
 	void free(void* ptr) override;
 
 	void reset() override;

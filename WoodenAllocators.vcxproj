@@ -154,14 +154,14 @@
   <ItemGroup>
     <ClInclude Include="Allocator.h" />
     <ClInclude Include="AllocatorLinear.h" />
-    <ClInclude Include="AllocatorPool.h" />
+    <ClInclude Include="AllocatorPoolFreeList.h" />
     <ClInclude Include="AllocatorStack.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Allocator.cpp" />
     <ClCompile Include="AllocatorLinear.cpp" />
-    <ClCompile Include="AllocatorPool.cpp" />
+    <ClCompile Include="AllocatorPoolFreeList.cpp" />
     <ClCompile Include="AllocatorStack.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
