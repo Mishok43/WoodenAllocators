@@ -1,5 +1,6 @@
 # WoodenAllocators
 WoodenAllocators - library with basic types of implemented allocators.
+<br>
 <b> Implemented </b>:
 1. Allocator base class
 2. Stack allocator
