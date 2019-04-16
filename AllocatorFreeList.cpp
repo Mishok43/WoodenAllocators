@@ -9,7 +9,7 @@ AllocatorFreeList<blkSizeType>::AllocatorFreeList(const blkSizeType totalSize) :
 template<typename blkSizeType>
 void AllocatorFreeList<blkSizeType>::init()
 {
-	beginPtr = (HeaderData*)malloc(sizeTotal);
+	beginPtr = (FreeHeaderData*)malloc(sizeTotal);
 	reset();
 }
 
@@ -20,24 +20,44 @@ void* AllocatorFreeList<blkSizeType>::allocate(const size_t blkSize/* =1 */, con
 #if ALLOCATING_DEBUG
 	assert(blkSize <= sizeTotal);
 #endif
-	neededSize = (blkSizeType)blkSize;
+	neededSize = (blkSizeType)blkSize+ALLOCATED_HEADER_DATA_SIZE+alignment;
 
-	HeaderData* curPtr = beginPtr;
-	while(curPtr->offsetNext != 0)
+	FreeHeaderData* blkPtr = beginPtr;
+	while(blkPtr->offsetNext != 0)
 	{
-		if (curPtr->size > neededSize)
+		if (blkPtr->size >= neededSize)
 		{
 			break;
 		}
-		curPtr = (HeaderData*)((char*)curPtr + curPtr->offsetNext);
+		blkPtr = (FreeHeaderData*)((char*)blkPtr + blkPtr->offsetNext);
 	}
 
-	if (curPtr->size < neededSize)
+	if (blkPtr->size < neededSize)
 	{
 		return nullptr;
 	}
 
-	uint8_t headerSize = sizeof(HeaderData); 
+	
+	neededSize -= alignment;
+
+	char* endPtr = (char*)blkPtr + blkPtr->size;
+	char* curPtr = endPtr - neededSize;
+
+	blkSizeType padding = computePadding((uintptr_t)curPtr, alignment);
+
+	// if it's not possible to divide block to 2 blocks, because of unsuffiecent size, just use it fully. TODO: merge the free blocks to the next block if it's possible
+	if ((uintptr_t)curPtr - padding - (uintptr_t)blkPtr < FREE_HEADER_DATA_SIZE)
+	{
+		curPtr = (char*)blkPtr;
+		padding = computePadding((uintptr_t)curPtr, alignment);
+		*(AllocatedHeaderData*)curPtr = blkPtr->size;
+	}
+	else
+	{
+
+	}
+
+
 
 	// try allocate memory in the end of the block
 

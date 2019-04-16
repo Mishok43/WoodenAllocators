@@ -15,18 +15,27 @@ public:
 
 	void reset() override;
 private:
-	struct HeaderData
+	struct FreeHeaderData
 	{
 		blkSizeType offsetNext;
 		blkSizeType size;
 	};
 
-	HeaderData* beginPtr;
+	struct AllocatedHeaderData
+	{
+		blkSizeType size;
+	};
 
+
+	FreeHeaderData* beginPtr;
 
 #if ALLOCATING_DEBUG
 	size_t numFreeBlocks;
 #endif
+
+
+	const static uint8_t FREE_HEADER_DATA_SIZE = sizeof(FreeHeaderData);
+	const static uint8_t ALLOCATED_HEADER_DATA_SIZE = sizeof(AllocatedHeaderData);
 };
 
 
