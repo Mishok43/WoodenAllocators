@@ -6,6 +6,7 @@
 #define ALLOC_DEBUG_VALUE 0b10101010
 #endif
 
+// Not generate virtual table for Allocator class, because it's a interface class
 __declspec(novtable) class Allocator
 {
 protected:
