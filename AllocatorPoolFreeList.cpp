@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "AllocatorPoolFreeList.h"
 
 AllocatorPoolFreeList::AllocatorPoolFreeList(const size_t blkSize, const size_t numBlocks) :

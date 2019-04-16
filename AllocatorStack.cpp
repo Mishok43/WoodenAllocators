@@ -1,5 +1,5 @@
+#include "pch.h"
 #include "AllocatorStack.h"
-
 
 AllocatorStack::AllocatorStack(const size_t totalSize, const size_t numChunksMax) :
 	Allocator(totalSize), numChunksMax(numChunksMax)
@@ -9,7 +9,7 @@ AllocatorStack::AllocatorStack(const size_t totalSize, const size_t numChunksMax
 void AllocatorStack::init()
 {
 	beginPtr = malloc(sizeTotal);
-	sizeData = aligned_alloc(sizeof(uint32_t), numChunksMax*sizeof(uint32_t));
+	sizeData = 0;// aligned_alloc(sizeof(uint32_t), numChunksMax * sizeof(uint32_t));
 
 	reset();
 }

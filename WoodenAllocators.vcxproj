@@ -153,6 +153,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Allocator.h" />
+    <ClInclude Include="AllocatorFreeList.h" />
     <ClInclude Include="AllocatorLinear.h" />
     <ClInclude Include="AllocatorPoolFreeList.h" />
     <ClInclude Include="AllocatorStack.h" />
@@ -160,6 +161,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Allocator.cpp" />
+    <ClCompile Include="AllocatorFreeList.cpp" />
     <ClCompile Include="AllocatorLinear.cpp" />
     <ClCompile Include="AllocatorPoolFreeList.cpp" />
     <ClCompile Include="AllocatorStack.cpp" />

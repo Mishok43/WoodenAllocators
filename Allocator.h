@@ -21,11 +21,13 @@ public:
 	virtual void free(void* ptr) = 0;
 
 	virtual void reset() = 0;
+	
 protected:
 
 #if ALLOCATING_DEBUG
 	static void setDebugValue(void* ptr, size_t numBytes);
 	static bool hasOnlyDebugValue(void* ptr, size_t numBytes);
+
 #endif
 };
 

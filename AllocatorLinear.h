@@ -15,6 +15,7 @@ public:
 	void free(void* ptr) override;
 
 	void reset() override;
+
 private:
 	void* beginPtr = nullptr;
 	void* curPtr = nullptr;

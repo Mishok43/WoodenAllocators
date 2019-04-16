@@ -30,6 +30,9 @@
     <ClInclude Include="AllocatorPoolFreeList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AllocatorFreeList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -48,6 +51,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AllocatorPoolFreeList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AllocatorFreeList.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
