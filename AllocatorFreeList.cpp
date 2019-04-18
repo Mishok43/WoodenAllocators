@@ -19,16 +19,19 @@ void* AllocatorFreeList<blkSizeType>::allocate(const size_t blkSize/* =1 */, con
 	blkSizeType neededSize;
 #if ALLOCATING_DEBUG
 	assert(blkSize <= sizeTotal);
+	assert(alignment == 0 || ALLOCATED_HEADER_DATA_SIZE <= alignment);
 #endif
-	neededSize = (blkSizeType)blkSize+ALLOCATED_HEADER_DATA_SIZE+alignment;
+	neededSize = (alignment > 0) ? (blkSizeType)blkSize + alignment: (blkSizeType)blkSize + ALLOCATED_HEADER_DATA_SIZE;
 
 	FreeHeaderData* blkPtr = beginPtr;
-	while(blkPtr->offsetNext != 0)
+	FreeHeaderData* prevBlkPtr;
+	while (blkPtr->offsetNext != 0)
 	{
 		if (blkPtr->size >= neededSize)
 		{
 			break;
 		}
+		prevBlkPtr = blkPtr;
 		blkPtr = (FreeHeaderData*)((char*)blkPtr + blkPtr->offsetNext);
 	}
 
@@ -37,27 +40,54 @@ void* AllocatorFreeList<blkSizeType>::allocate(const size_t blkSize/* =1 */, con
 		return nullptr;
 	}
 
-	
-	neededSize -= alignment;
 
-	char* endPtr = (char*)blkPtr + blkPtr->size;
-	char* curPtr = endPtr - neededSize;
+	char* endBlkPtr = (char*)blkPtr + blkPtr->size;
+	char* curPtr;
 
-	blkSizeType padding = computePadding((uintptr_t)curPtr, alignment);
-
-	// if it's not possible to divide block to 2 blocks, because of unsuffiecent size, just use it fully. TODO: merge the free blocks to the next block if it's possible
-	if ((uintptr_t)curPtr - padding - (uintptr_t)blkPtr < FREE_HEADER_DATA_SIZE)
+	if (alignment == 0)
 	{
-		curPtr = (char*)blkPtr;
-		padding = computePadding((uintptr_t)curPtr, alignment);
-		*(AllocatedHeaderData*)curPtr = blkPtr->size;
+		// if it's not possible to divide block to 2 blocks, because of unsuffiecent size, just use it fully. 
+		if (blkPtr->size - neededSize >= FREE_HEADER_DATA_SIZE)
+		{
+			blkPtr->size -= neededSize;
+			curPtr = endBlkPtr - neededSize;
+			((AllocatedHeaderData*)curPtr)->size = blkSize;
+		}
+		else
+		{
+			curPtr = (char*)blkPtr;
+			prevBlkPtr->offsetNext = blkPtr->offsetNext;
+			((AllocatedHeaderData*)curPtr)->size = blkPtr->size - ALLOCATED_HEADER_DATA_SIZE;
+		}
+		return curPtr + ALLOCATED_HEADER_DATA_SIZE;
 	}
 	else
 	{
+		neededSize -= alignment;
+		curPtr = endBlkPtr - neededSize;
+		blkSizeType padding = alignment - computePadding((uintptr_t)curPtr, alignment);
+		if (blkPtr->size - padding - neededSize >= FREE_HEADER_DATA_SIZE)
+		{
+			curPtr -= padding;
+			blkPtr->size -= padding - neededSize;
+			((AllocatedHeaderData*)curPtr)->size = blkSize;
+		}
+		else
+		{
+			curPtr = (char*)blkPtr;
+			padding = computePadding((uintptr_t)curPtr, alignment);
+			
+		}
 
+
+
+
+
+		neededSize += ALLOCATED_HEADER_DATA_SIZE;
+		neededSize -= alignment - ALLOCATED_HEADER_DATA_SIZE;
+
+		blkSizeType padding = alignment - computePadding((uintptr_t)curPtr, alignment);
 	}
-
-
 
 	// try allocate memory in the end of the block
 

@@ -25,7 +25,7 @@ public:
 	
 protected:
 
-	uint32_t computePadding(uintptr_t ptr, uint32_t alignment) const;
+	inline uint32_t computePadding(uintptr_t ptr, uint32_t alignment) const;
 
 #if ALLOCATING_DEBUG
 	static void setDebugValue(void* ptr, size_t numBytes);
