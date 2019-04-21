@@ -7,7 +7,7 @@
 class AllocatorPoolFreeList: public Allocator
 {
 public:
-	AllocatorPoolFreeList(const size_t blkSize, const size_t numBlocks);
+	AllocatorPoolFreeList(const size_t blkSize, const size_t numBlocks, const size_t alignment);
 	~AllocatorPoolFreeList();
 
 	void init() override;

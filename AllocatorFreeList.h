@@ -17,8 +17,8 @@ public:
 private:
 	struct FreeHeaderData
 	{
-		blkSizeType offsetNext;
 		blkSizeType size;
+		blkSizeType next;
 	};
 
 	struct AllocatedHeaderData
@@ -28,11 +28,6 @@ private:
 
 
 	FreeHeaderData* beginPtr;
-
-#if ALLOCATING_DEBUG
-	size_t numFreeBlocks;
-#endif
-
 
 	const static uint8_t FREE_HEADER_DATA_SIZE = sizeof(FreeHeaderData);
 	const static uint8_t ALLOCATED_HEADER_DATA_SIZE = sizeof(AllocatedHeaderData);

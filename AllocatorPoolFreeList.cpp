@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "AllocatorPoolFreeList.h"
 
-AllocatorPoolFreeList::AllocatorPoolFreeList(const size_t blkSize, const size_t numBlocks) :
+AllocatorPoolFreeList::AllocatorPoolFreeList(const size_t blkSize, const size_t numBlocks, const size_t alignment) :
 	Allocator(blkSize*numBlocks), blkSize(blkSize), numBlocks(numBlocks)
 {
 
@@ -9,7 +9,7 @@ AllocatorPoolFreeList::AllocatorPoolFreeList(const size_t blkSize, const size_t 
 
 void AllocatorPoolFreeList::init()
 {
-	beginPtr = malloc(sizeTotal);
+	beginPtr = aligned_alloc(sizeTotal);
 	reset();
 }
 
