@@ -22,7 +22,7 @@ private:
 	{
 		FreeHeaderData* next;
 		FreeHeaderData* prev;
-		bool bAllocatd;
+		bool bAllocated;
 	};
 #pragma pack(pop)
 
@@ -48,8 +48,11 @@ private:
 	FreeHeaderData* predecessorFreeBlk(FreeHeaderData* node) const;
 	void insertFreeBlk(FreeHeaderData* data);
 	void deleteFreeBlk(FreeHeaderData* node);
+	void transitFreeBlk(FreeHeaderData* node, FreeHeaderData* child);
 
 	inline uint32_t getBlkSize(void* blk) const;
+	inline void* getAfterFreeHeaderPtr(void* ptr) const;
+	inline void* getAfterAllocatedHeaderPtr(void* ptr) const;
 	
 	const static uint8_t FREE_HEADER_DATA_SIZE = sizeof(FreeHeaderData);
 	const static uint8_t ALLOCATED_HEADER_DATA_SIZE = sizeof(AllocatedHeaderData);

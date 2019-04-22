@@ -25,13 +25,14 @@ AllocatorFreeListTree::findBestFitFreeBlk(size_t blkSize) const
 	FreeHeaderData* bestFit = nullptr;
 	do 
 	{
-		if (blkSize > cur->size)
+		uint32_t curBlkSize = getBlkSize(cur);
+		if (blkSize > curBlkSize)
 		{
 			cur = cur->right;
 		}
 		else
 		{
-			if (blkSize < cur->size)
+			if (blkSize < curBlkSize)
 			{
 				bestFit = cur;
 				cur = cur->left;
@@ -202,9 +203,9 @@ void AllocatorFreeListTree::deleteFreeBlk(FreeHeaderData* node)
 #endif
 	}
 
+	FreeHeaderData* nodeToReplace;
 	if (node->right == nullptr || node->left == nullptr)
 	{
-		FreeHeaderData* nodeToReplace;
 		if (node->left == nullptr && node->right == nullptr)
 		{
 			nodeToReplace = nullptr;
@@ -213,33 +214,41 @@ void AllocatorFreeListTree::deleteFreeBlk(FreeHeaderData* node)
 		{
 			nodeToReplace = (node->left = nullptr) ? node->right : node->left;
 		}
-
-		if (!isRoot)
+	}
+	else
+	{
+		nodeToReplace = minFreeBlk(node->right);
+		if (nodeToReplace->right != nullptr)
 		{
-			nodeToReplace->parent = parent;
+			transitFreeBlk(nodeToReplace, nodeToReplace->right);
+		}
+	}
 
-			if (isRightChild)
-			{
-				parent->right = nodeToReplace;
-			}
-			else
-			{
-				parent->left = nodeToReplace;
-			}
+	transitFreeBlk(node, nodeToReplace);
+}
+
+void AllocatorFreeListTree::transitFreeBlk(FreeHeaderData* node, FreeHeaderData* child)
+{
+#if ALLOCATING_DEBUG
+	assert(node->right == child || node->left == child);
+#endif
+
+	if (node->parent != nullptr)
+	{
+		child->parent = node->parent;
+		if (node->parent->right == node)
+		{
+			node->parent->right = child;
 		}
 		else
 		{
-			nodeToReplace->parent = nullptr;
-			root = nodeToReplace;
+			node->parent->left = child;
 		}
 	}
 	else
 	{
-		if (isRightChild)
-		{
-			FreeHeaderData* successor = successorFreeBlk(node);
-
-		}
+		root = child;
+		child->parent = nullptr;
 	}
 }
 
@@ -252,83 +261,65 @@ void* AllocatorFreeListTree::allocate(const size_t blkSize/* =1 */, const size_t
 #endif
 	neededSize = (uint32_t)blkSize + ALLOCATED_HEADER_DATA_SIZE;
 
-	FreeHeaderData* blk =  findBestFitFreeBlk(neededSize);
+	FreeHeaderData* freeBlk =  findBestFitFreeBlk(neededSize);
+	uint32_t freeBlkSize = getBlkSize(freeBlk);
 	AllocatedHeaderData* res;
-
-	// if it's not possible to divide block to 2 blocks, because of unsuffiecent size, just use it fully. 
-	if (blk->size - neededSize < FREE_HEADER_DATA_SIZE)
+	 
+	// if it's not possible to divide block to 2 blocks, because of unsufficient size, just use it fully. 
+	if (freeBlkSize - neededSize < FREE_HEADER_DATA_SIZE)
 	{
-		res = (AllocatedHeaderData*)blk;
-		// TODO: rebalance RBTree
-		blk->prev->next = blk->next;
-		res->size = blk->size;
+		res = (AllocatedHeaderData*)freeBlk;
 	}
 	else
 	{
-		blk->size -= neededSize;
-		res = (AllocatedHeaderData*)((char*)blk + blk->size - neededSize);
-		res->size = neededSize;
-		res->prev = blk;
-		res->next = blk->next;
+		res = (AllocatedHeaderData*)((char*)freeBlk + blkSize - neededSize);
+		res->next = freeBlk->next;
+		res->prev = freeBlk;
+
+		freeBlk->next = (FreeHeaderData*)res;
 	}
-	return curPtr + ALLOCATED_HEADER_DATA_SIZE;
+	res->bAllocated = true;
+
+	return getAfterAllocatedHeaderPtr(res);
 }
 
 
 void AllocatorFreeListTree::free(void* ptr)
 {
-	AllocatedHeaderData* curPtr = (AllocatedHeaderData*)((char*)ptr - ALLOCATED_HEADER_DATA_SIZE);
+	AllocatedHeaderData* curBlk = (AllocatedHeaderData*)((char*)ptr - ALLOCATED_HEADER_DATA_SIZE);
 #if ALLOCATING_DEBUG
-	assert(!hasOnlyDebugValue(curPtr, ALLOCATED_HEADER_DATA_SIZE));
+	assert(!hasOnlyDebugValue(curBlk, ALLOCATED_HEADER_DATA_SIZE));
 #endif
 
-	FreeHeaderData* prevFreePtr = beginPtr;
-	while (prevFreePtr->next != 0)
-	{
-		char* nextFreePtr = (char*)beginPtr + prevFreePtr->next;
-		if ((uintptr_t)nextFreePtr < (uintptr_t)curPtr)
-		{
-			prevFreePtr = (FreeHeaderData*)nextFreePtr;
-		}
-		else
-		{
-			break;
-		}
-	}
-
 #if ALLOCATING_DEBUG
-	assert(!hasOnlyDebugValue((char*)curPtr + ALLOCATED_HEADER_DATA_SIZE, curPtr->size));
+	assert(!hasOnlyDebugValue(getAfterAllocatedHeaderPtr(curBlk), getBlkSize(curBlk)-ALLOCATED_HEADER_DATA_SIZE));
 #endif
 
 	// Merge prev and cur free blocks if it's possible
-	if ((char*)prevFreePtr + prevFreePtr->size == curPtr)
+	if (!curBlk->prev->bAllocated)
 	{
-		prevFreePtr->size += curPtr->size;
-		prevFreePtr->next = curPtr->next;
+		curBlk->prev->next = curBlk->next;
 #if ALLOCATING_DEBUG
-		setDebugValue((char*)curPtr, curPtr->size + ALLOCATED_HEADER_DATA_SIZE);
+		setDebugValue((char*)curBlk, getBlkSize(curBlk));
 #endif
-		curPtr = prevFreePtr;
+		curBlk = curBlk->prev;
 	}
 	else
 	{
-		FreeHeaderData* curFreePtr = (FreeHeaderData*)curPtr;
-		curFreePtr->next = prevFreePtr->next;
-		prevFreePtr->next = (uintptr_t)curFreePtr - (uintptr_t)beginPtr;
+		curBlk->bAllocated = false;
+		insertFreeBlk((FreeHeaderData*)curBlk);
 #if ALLOCATING_DEBUG
-		setDebugValue((char*)curPtr + ALLOCATED_HEADER_DATA_SIZE, curPtr->size);
+		setDebugValue(getAfterFreeHeaderPtr(curBlk), getBlkSize(curBlk)-FREE_HEADER_DATA_SIZE);
 #endif
 	}
 
 	// Merge cur and next free blocks if it's possible
-	if (curPtr->nextOffset != 0)
+	if (!curBlk->next->bAllocated)
 	{
-		FreeHeaderData* nextFreePtr = (char*)beginPtr + curPtr->nextOffset;
-		if ((char*)curPtr + curPtr->size == nextFreePtr)
-		{
-			curPtr->size += nextFreePtr->size;
-			curPtr->nextOffset = nextFreePtr->nextOffset;
-		}
+		curBlk->next = curBlk->next->next;
+#if ALLOCATING_DEBUG
+		setDebugValue(curBlk->next, getBlkSize(curBlk->next));
+#endif
 	}
 }
 
@@ -341,8 +332,6 @@ void AllocatorFreeListTree::reset()
 #endif
 
 	root = beginPtr;
-
-	root->size = sizeTotal;
 	root->prev = 0;
 	root->next = 0;
 	root->left = 0;
@@ -350,11 +339,21 @@ void AllocatorFreeListTree::reset()
 }
 
 
+void* AllocatorFreeListTree::getAfterAllocatedHeaderPtr(void* ptr) const
+{
+	return (char*)ptr + ALLOCATED_HEADER_DATA_SIZE;
+}
+
+void* AllocatorFreeListTree::getAfterFreeHeaderPtr(void* ptr) const
+{
+	return (char*)ptr + FREE_HEADER_DATA_SIZE;
+}
+
 AllocatorFreeListTree::~AllocatorFreeListTree()
 {
 #if ALLOCATING_DEBUG
-	assert(beginPtr->size == sizeTotal && "Memory leak");
-	assert(hasOnlyDebugValue((char*)beginPtr + FREE_HEADER_DATA_SIZE, beginPtr->size - FREE_HEADER_DATA_SIZE) && "Memory leak or ub");
+	assert(getBlkSize(beginPtr) == sizeTotal && "Memory leak");
+	assert(hasOnlyDebugValue(getAfterFreeHeaderPtr(beginPtr), getBlkSize(beginPtr)- FREE_HEADER_DATA_SIZE) && "Memory leak or ub");
 #endif
 
 	free(beginPtr);
