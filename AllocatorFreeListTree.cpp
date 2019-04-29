@@ -22,7 +22,7 @@ AllocatorFreeListTree::findBestFitFreeBlk(size_t blkSize) const
 	assert(root != nullptr);
 #endif
 	FreeHeaderData* cur = root;
-	FreeHeaderData* bestFit = nullptr;
+	FreeHeaderData* bestFit = &NIL;
 	do 
 	{
 		uint32_t curBlkSize = getBlkSize(cur);
@@ -43,7 +43,7 @@ AllocatorFreeListTree::findBestFitFreeBlk(size_t blkSize) const
 				break;
 			}
 		}
-	} while (cur);
+	} while (!isNIL(cur));
 
 	return bestFit;
 }
@@ -52,11 +52,11 @@ AllocatorFreeListTree::FreeHeaderData*
 AllocatorFreeListTree::minFreeBlk(FreeHeaderData* node) const
 {
 #if ALLOCATING_DEBUG
-	assert(node != nullptr);
+	assert(node != nullptr && node != &NIL);
 #endif
 
 	FreeHeaderData* minNode = node;
-	while (minNode && minNode->left)
+	while (!isNIL(minNode) && !isNIL(minNode->left))
 	{
 		minNode = minNode->left;
 	}
@@ -68,11 +68,11 @@ AllocatorFreeListTree::FreeHeaderData*
 AllocatorFreeListTree::maxFreeBlk(FreeHeaderData* node) const
 {
 #if ALLOCATING_DEBUG
-	assert(node != nullptr);
+	assert(node != nullptr && node != &NIL);
 #endif
 
 	FreeHeaderData* maxNode = node;
-	while (maxNode && maxNode->right)
+	while (!isNIL(maxNode) && !isNIL(maxNode->right))
 	{
 		maxNode = maxNode->right;
 	}
@@ -84,10 +84,10 @@ AllocatorFreeListTree::FreeHeaderData*
 AllocatorFreeListTree::successorFreeBlk(FreeHeaderData* node) const
 {
 #if ALLOCATING_DEBUG
-	assert(node != nullptr);
+	assert(node != nullptr && node != &NIL);
 #endif
 
-	if (node->right)
+	if (!isNIL(node->right))
 	{
 		return minFreeBlk(node->right);
 	}
@@ -95,7 +95,7 @@ AllocatorFreeListTree::successorFreeBlk(FreeHeaderData* node) const
 	{
 		FreeHeaderData* prevNode = node;
 		FreeHeaderData* successorNode = node->parent;
-		while (successorNode && successorNode->right == prevNode)
+		while (!isNIL(successorNode) && successorNode->right == prevNode)
 		{
 			prevNode = successorNode;
 			successorNode = successorNode->parent;
@@ -112,7 +112,7 @@ AllocatorFreeListTree::predecessorFreeBlk(FreeHeaderData* node) const
 #endif
 
 
-	if (node->left)
+	if (!isNIL(node->left))
 	{
 		return maxFreeBlk(node->left);
 	}
@@ -120,7 +120,7 @@ AllocatorFreeListTree::predecessorFreeBlk(FreeHeaderData* node) const
 	{
 		FreeHeaderData* prevNode = node;
 		FreeHeaderData* predeccessorNode = node->parent;
-		while (predeccessorNode && predeccessorNode->left == prevNode)
+		while (!isNIL(predeccessorNode) && predeccessorNode->left == prevNode)
 		{
 			prevNode = predeccessorNode;
 			predeccessorNode = predeccessorNode->left;
@@ -144,27 +144,27 @@ void AllocatorFreeListTree::insertFreeBlk(FreeHeaderData* data)
 	FreeHeaderData* cur = root;
 	bool isRightBlk;
 	while(true)
-	{
+	{ 
 		isRightBlk = blkSize > getBlkSize(cur);
 		if (isRightBlk)
 		{
-			if (cur->right)
+			if (!isNIL(cur->right))
 			{
 				cur = cur->right;
 			}
 		}
 		else
 		{
-			if (cur->left)
+			if (!isNIL(cur->left))
 			{
 				cur = cur->left;
 			}
 		}
 	}
 
-	root->right = nullptr;
-	root->left = nullptr;
-	if (cur != nullptr)
+	data->right = &NIL;
+	data->left = &NIL;
+	if (!isNIL(cur))
 	{
 		data->parent = cur;
 		if (isRightBlk)
@@ -178,78 +178,217 @@ void AllocatorFreeListTree::insertFreeBlk(FreeHeaderData* data)
 	}
 	else
 	{
-		root = cur;
-		root->parent = nullptr;
+		data->parent = &NIL;
+		root = data;
 	}
 
-	//TODO: rebalance
+	insertFixUpTree(data);
+}
+
+void AllocatorFreeListTree::rotateRightFreeBlk(FreeHeaderData* y)
+{
+	FreeHeaderData* x = y->left;
+	y->left = x->right;
+	if (!isNIL(x->right))
+	{
+		x->right->parent = y;
+	}
+
+	x->parent = y->parent;
+	if (isNIL(y->parent))
+	{
+		root = y;
+	}
+	else
+	{
+		if (y->parent->left == y)
+		{
+			y->parent->left = x;
+		}
+		else
+		{
+			y->parent->right = x;
+		}
+	}
+
+	x->right = y;
+	y->parent = x;
+}
+
+void AllocatorFreeListTree::rotateLeftFreeBlk(FreeHeaderData* x)
+{
+	FreeHeaderData* y = x->right;
+	x->right = y->left;
+	if (!isNIL(y->left))
+	{
+		y->left->parent = x;
+	}
+	y->parent = x->parent;
+	if (isNIL(x->parent))
+	{
+		root = y;
+	}
+	else
+	{
+		if (x->parent->left == x)
+		{
+			x->parent->left = y;
+		}
+		else
+		{
+			x->parent->right = y;
+		}
+	}
+
+	y->left = x;
+	x->parent = y;
 }
 
 
-void AllocatorFreeListTree::deleteFreeBlk(FreeHeaderData* node)
+void AllocatorFreeListTree::insertFixUpTree(FreeHeaderData* z)
+{
+	while (z->parent->bRed)
+	{
+		FreeHeaderData* y;
+		bool parentIsRightChild = z->parent == z->parent->parent->right;
+		if (!parentIsRightChild)
+		{
+			y = z->parent->parent->right;
+			if (y->bRed)
+			{
+				y->bRed = false;
+				z->parent = false;
+				z->parent->parent->bRed = true;
+				z = z->parent->parent;
+			}
+			else
+			{
+				bool isRightChild = z == z->parent->right;
+				if (isRightChild)
+				{
+					z = z->parent;
+					rotateLeftFreeBlk(z);
+				}
+
+				z->parent->bRed = false;
+				z->parent->parent->bRed = true;
+				rotateRightFreeBlk(z->parent->parent);
+			}
+		}
+		else{
+			if (y->bRed)
+			{
+				y->bRed = false;
+				z->parent = false;
+				z->parent->parent->bRed = true;
+				z = z->parent->parent;
+			}
+			else
+			{
+				bool isLeftChild = z == z->parent->left;
+				if (isLeftChild)
+				{
+					z = z->parent;
+					rotateRightFreeBlk(z);
+				}
+
+				z->parent->bRed = false;
+				z->parent->parent->bRed = true;
+				rotateLeftFreeBlk(z->parent->parent);
+			}
+		}
+	}
+
+
+	root->bRed = false;
+}
+
+
+void AllocatorFreeListTree::deleteFreeBlk(FreeHeaderData* z)
 {
 #if ALLOCATING_DEBUG
-	assert(node != nullptr);
+	assert(z != nullptr && !isNIL(z));
 #endif
-	bool isRoot = root == node;
+	bool isRoot = root == z;
 	bool isRightChild;
 
-	FreeHeaderData* parent = node->parent;
+	FreeHeaderData* parent = z->parent;
 	if (!isRoot)
 	{
 #if ALLOCATING_DEBUG
-		assert(parent != nullptr);
-		isRightChild = parent->right == node;
+		assert(!isNIL(parent));
 #endif
+		isRightChild = parent->right == z;
 	}
 
-	FreeHeaderData* nodeToReplace;
-	if (node->right == nullptr || node->left == nullptr)
+	FreeHeaderData* x;
+	FreeHeaderData* y = z;
+	bool yIsRed = y->bRed;
+
+	if (isNIL(z->left))
 	{
-		if (node->left == nullptr && node->right == nullptr)
-		{
-			nodeToReplace = nullptr;
-		}
-		else
-		{
-			nodeToReplace = (node->left = nullptr) ? node->right : node->left;
-		}
+		x = z->right;
+		transitFreeBlk(z, z->right);
 	}
 	else
 	{
-		nodeToReplace = minFreeBlk(node->right);
-		if (nodeToReplace->right != nullptr)
+		if (isNIL(z->right))
 		{
-			transitFreeBlk(nodeToReplace, nodeToReplace->right);
+			x = z->left;
+			transitFreeBlk(z, z->left);
+		}
+		else
+		{
+			y = minFreeBlk(z->right);
+			yIsRed = y->bRed;
+			x = y->right;
+			if (y->parent == z)
+			{
+				x->parent = y;
+			}
+			else
+			{
+				transitFreeBlk(y, y->right);
+				y->right = z->right;
+				z->right->parent = y;
+			}
+
+			transitFreeBlk(z, y);
+			y->left = z->left;
+			y->left->parent = y;
+			y->bRed = z->bRed;
 		}
 	}
 
-	transitFreeBlk(node, nodeToReplace);
+	if (!yIsRed)
+	{
+		deleteFixUpTree(x);
+	}
 }
 
-void AllocatorFreeListTree::transitFreeBlk(FreeHeaderData* node, FreeHeaderData* child)
+void AllocatorFreeListTree::transitFreeBlk(FreeHeaderData* u, FreeHeaderData* v)
 {
 #if ALLOCATING_DEBUG
-	assert(node->right == child || node->left == child);
+	assert(u->right == v || u->left == v);
 #endif
 
-	if (node->parent != nullptr)
+	if (!isNIL(u->parent))
 	{
-		child->parent = node->parent;
-		if (node->parent->right == node)
+		if (u->parent->right == u)
 		{
-			node->parent->right = child;
+			u->parent->right = v;
 		}
 		else
 		{
-			node->parent->left = child;
+			u->parent->left = v;
 		}
 	}
 	else
 	{
-		root = child;
-		child->parent = nullptr;
+		root = v;
 	}
+
+	v->parent = u->parent;
 }
 
 void* AllocatorFreeListTree::allocate(const size_t blkSize/* =1 */, const size_t alignment /* = 0 */)
@@ -331,11 +470,10 @@ void AllocatorFreeListTree::reset()
 	setDebugValue(beginPtr, sizeTotal);
 #endif
 
-	root = beginPtr;
-	root->prev = 0;
-	root->next = 0;
-	root->left = 0;
-	root->right = 0;
+	root = &NIL;
+	beginPtr->bRed = false;
+	beginPtr->
+	insertFreeBlk()
 }
 
 
@@ -357,4 +495,9 @@ AllocatorFreeListTree::~AllocatorFreeListTree()
 #endif
 
 	free(beginPtr);
+}
+
+inline bool AllocatorFreeListTree::isNIL(FreeHeaderData* blk) const noexcept
+{
+	return blk == &NIL;
 }

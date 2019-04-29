@@ -36,16 +36,21 @@ private:
 	};
 #pragma pack(pop)
 
-
+	static FreeHeaderData NIL;
 
 	FreeHeaderData* beginPtr;
 	FreeHeaderData* root;
 
+	inline bool			isNIL(FreeHeaderData*  blk) const noexcept;
 	FreeHeaderData* findBestFitFreeBlk(size_t blkSize) const;
 	FreeHeaderData* minFreeBlk(FreeHeaderData* node) const;
 	FreeHeaderData* maxFreeBlk(FreeHeaderData* node) const;
 	FreeHeaderData* successorFreeBlk(FreeHeaderData* node) const;
 	FreeHeaderData* predecessorFreeBlk(FreeHeaderData* node) const;
+	void insertFixUpTree(FreeHeaderData* node);
+	void deleteFixUpTree(FreeHeaderData* node);
+	void rotateLeftFreeBlk(FreeHeaderData* node);
+	void rotateRightFreeBlk(FreeHeaderData* node);
 	void insertFreeBlk(FreeHeaderData* data);
 	void deleteFreeBlk(FreeHeaderData* node);
 	void transitFreeBlk(FreeHeaderData* node, FreeHeaderData* child);
