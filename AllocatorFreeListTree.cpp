@@ -143,27 +143,31 @@ void AllocatorFreeListTree::insertFreeBlk(FreeHeaderData* data)
 	uint32_t blkSize = getBlkSize(data);
 	FreeHeaderData* cur = root;
 	bool isRightBlk;
-	while(true)
-	{ 
-		isRightBlk = blkSize > getBlkSize(cur);
-		if (isRightBlk)
+	if (!isNIL(cur))
+	{
+		while (true)
 		{
-			if (!isNIL(cur->right))
+			isRightBlk = blkSize > getBlkSize(cur);
+			if (isRightBlk)
 			{
-				cur = cur->right;
+				if (!isNIL(cur->right))
+				{
+					cur = cur->right;
+				}
 			}
-		}
-		else
-		{
-			if (!isNIL(cur->left))
+			else
 			{
-				cur = cur->left;
+				if (!isNIL(cur->left))
+				{
+					cur = cur->left;
+				}
 			}
 		}
 	}
 
 	data->right = &NIL;
 	data->left = &NIL;
+	data->bRed = true;
 	if (!isNIL(cur))
 	{
 		data->parent = cur;
@@ -304,6 +308,80 @@ void AllocatorFreeListTree::insertFixUpTree(FreeHeaderData* z)
 }
 
 
+void AllocatorFreeListTree::deleteFixUpTree(FreeHeaderData* x)
+{
+	while (root != x && !x->bRed)
+	{
+		FreeHeaderData* w;
+		if (x == x->parent->left)
+		{
+			w = x->parent->right;
+			if (w->bRed)
+			{
+				w->bRed = false;
+				x->parent->bRed = true;
+				rotateLeftFreeBlk(x->parent);
+				w = x->parent->right;
+			}
+			if (!w->bRed && !w->right->bRed)
+			{
+				w->bRed = true;
+				x = x->parent;
+			}
+			else
+			{
+				if (w->left->bRed)
+				{
+					w->bRed = true;
+					w->left->bRed = false;
+					rotateRightFreeBlk(w);
+					w = x->parent->right;
+				}
+
+				w->bRed = x->parent->bRed;
+				w->right->bRed = false;
+				x->parent->bRed = false;
+				rotateLeftFreeBlk(x->parent);
+				x = root;
+			}
+		}
+		else
+		{
+			w = x->parent->left;
+			if (w->bRed)
+			{
+				w->bRed = false;
+				x->parent->bRed = true;
+				rotateRightFreeBlk(x->parent);
+				w = x->parent->left;
+			}
+			if (!w->bRed && !w->left->bRed)
+			{
+				w->bRed = true;
+				x = x->parent;
+			}
+			else
+			{
+				if (w->right->bRed)
+				{
+					w->bRed = true;
+					w->right->bRed = false;
+					rotateLeftFreeBlk(w);
+					w = x->parent->left;
+				}
+
+				w->bRed = x->parent->bRed;
+				w->left->bRed = false;
+				x->parent->bRed = false;
+				rotateRightFreeBlk(x->parent);
+				x = root;
+			}
+		}
+	}
+
+	x->bRed = false;
+}
+
 void AllocatorFreeListTree::deleteFreeBlk(FreeHeaderData* z)
 {
 #if ALLOCATING_DEBUG
@@ -401,6 +479,9 @@ void* AllocatorFreeListTree::allocate(const size_t blkSize/* =1 */, const size_t
 	neededSize = (uint32_t)blkSize + ALLOCATED_HEADER_DATA_SIZE;
 
 	FreeHeaderData* freeBlk =  findBestFitFreeBlk(neededSize);
+	if (isNIL(freeBlk))
+		return nullptr;
+
 	uint32_t freeBlkSize = getBlkSize(freeBlk);
 	AllocatedHeaderData* res;
 	 
@@ -408,14 +489,18 @@ void* AllocatorFreeListTree::allocate(const size_t blkSize/* =1 */, const size_t
 	if (freeBlkSize - neededSize < FREE_HEADER_DATA_SIZE)
 	{
 		res = (AllocatedHeaderData*)freeBlk;
+		deleteFreeBlk(freeBlk);
 	}
 	else
 	{
+		deleteFreeBlk(freeBlk);
+		
 		res = (AllocatedHeaderData*)((char*)freeBlk + blkSize - neededSize);
 		res->next = freeBlk->next;
 		res->prev = freeBlk;
 
 		freeBlk->next = (FreeHeaderData*)res;
+		insertFreeBlk(freeBlk);
 	}
 	res->bAllocated = true;
 
@@ -437,6 +522,8 @@ void AllocatorFreeListTree::free(void* ptr)
 	// Merge prev and cur free blocks if it's possible
 	if (!curBlk->prev->bAllocated)
 	{
+		deleteFreeBlk(curBlk->prev);
+
 		curBlk->prev->next = curBlk->next;
 #if ALLOCATING_DEBUG
 		setDebugValue((char*)curBlk, getBlkSize(curBlk));
@@ -446,7 +533,6 @@ void AllocatorFreeListTree::free(void* ptr)
 	else
 	{
 		curBlk->bAllocated = false;
-		insertFreeBlk((FreeHeaderData*)curBlk);
 #if ALLOCATING_DEBUG
 		setDebugValue(getAfterFreeHeaderPtr(curBlk), getBlkSize(curBlk)-FREE_HEADER_DATA_SIZE);
 #endif
@@ -455,11 +541,15 @@ void AllocatorFreeListTree::free(void* ptr)
 	// Merge cur and next free blocks if it's possible
 	if (!curBlk->next->bAllocated)
 	{
+		deleteFreeBlk(curBlk->next);
+
 		curBlk->next = curBlk->next->next;
 #if ALLOCATING_DEBUG
 		setDebugValue(curBlk->next, getBlkSize(curBlk->next));
 #endif
 	}
+	
+	insertFreeBlk((FreeHeaderData*)curBlk);
 }
 
 
@@ -471,9 +561,7 @@ void AllocatorFreeListTree::reset()
 #endif
 
 	root = &NIL;
-	beginPtr->bRed = false;
-	beginPtr->
-	insertFreeBlk()
+	insertFreeBlk(beginPtr);
 }
 
 
