@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "AllocatorStack.h"
 
+namespace wal{
+
 AllocatorStack::AllocatorStack(const size_t totalSize, const size_t numChunksMax) :
 	Allocator(totalSize), numChunksMax(numChunksMax)
 {}
@@ -9,14 +11,13 @@ AllocatorStack::AllocatorStack(const size_t totalSize, const size_t numChunksMax
 void AllocatorStack::init()
 {
 	beginPtr = malloc(sizeTotal);
-	sizeData = 0;// aligned_alloc(sizeof(uint32_t), numChunksMax * sizeof(uint32_t));
+	sizeData = 0;
 
 	reset();
 }
 
 
-
-void* AllocatorStack::allocate(const size_t size, const size_t alignment /* = 0*/)
+void* AllocatorStack::allocMem(const size_t size, const size_t alignment /* = 0*/)
 {
 	size_t padding = (alignment > 0) ? computePadding((uintptr_t)curPtr, alignment): 0; // use bitwise and operator for fast mode, because alignment should be power of 2 
 
@@ -35,7 +36,7 @@ void* AllocatorStack::allocate(const size_t size, const size_t alignment /* = 0*
 }
 
 
-void AllocatorStack::free(void* ptr)
+void AllocatorStack::freeMem(void* ptr)
 {
 #if ALLOCATING_DEBUG
 	assert(numChunks > 0 && "stack must be not empty!");
@@ -84,6 +85,8 @@ AllocatorStack::~AllocatorStack()
 	assert(curPtr == beginPtr);
 #endif
 
-	free(beginPtr);
-	free(sizeData);
+	freeMem(beginPtr);
+	freeMem(sizeData);
+}
+
 }

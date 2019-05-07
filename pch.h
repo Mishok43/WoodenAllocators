@@ -15,6 +15,13 @@
 #include <cstring>
 #include <cstdlib>
 
+namespace wal
+{
+#define ALLOCATING_DEBUG true
+#if ALLOCATING_DEBUG
+#define ALLOC_DEBUG_VALUE 0b10101010
+#endif
+}
 
 using size_t = size_t;
 using uint32_t = uint32_t;

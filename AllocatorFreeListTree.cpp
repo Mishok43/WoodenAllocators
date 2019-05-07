@@ -1,10 +1,13 @@
 #include "pch.h"
 #include "AllocatorFreeListTree.h"
 
+namespace wal{
+AllocatorFreeListTree::FreeHeaderData AllocatorFreeListTree::NIL;
 
 AllocatorFreeListTree::AllocatorFreeListTree(const uint32_t totalSize) :
 	Allocator(totalSize)
 {
+	init();
 }
 
 
@@ -280,6 +283,7 @@ void AllocatorFreeListTree::insertFixUpTree(FreeHeaderData* z)
 			}
 		}
 		else{
+			y = z->parent->parent->left;
 			if (y->bRed)
 			{
 				y->bRed = false;
@@ -469,12 +473,11 @@ void AllocatorFreeListTree::transitFreeBlk(FreeHeaderData* u, FreeHeaderData* v)
 	v->parent = u->parent;
 }
 
-void* AllocatorFreeListTree::allocate(const size_t blkSize/* =1 */, const size_t alignment /* = 0 */)
+void* AllocatorFreeListTree::allocMem(const size_t blkSize/* =1 */)
 {
 	uint32_t neededSize;
 #if ALLOCATING_DEBUG
 	assert(blkSize <= sizeTotal);
-	assert(alignment == 0, "Alignment not supported!");
 #endif
 	neededSize = (uint32_t)blkSize + ALLOCATED_HEADER_DATA_SIZE;
 
@@ -508,7 +511,7 @@ void* AllocatorFreeListTree::allocate(const size_t blkSize/* =1 */, const size_t
 }
 
 
-void AllocatorFreeListTree::free(void* ptr)
+void AllocatorFreeListTree::freeMem(void* ptr)
 {
 	AllocatedHeaderData* curBlk = (AllocatedHeaderData*)((char*)ptr - ALLOCATED_HEADER_DATA_SIZE);
 #if ALLOCATING_DEBUG
@@ -579,13 +582,14 @@ AllocatorFreeListTree::~AllocatorFreeListTree()
 {
 #if ALLOCATING_DEBUG
 	assert(getBlkSize(beginPtr) == sizeTotal && "Memory leak");
-	assert(hasOnlyDebugValue(getAfterFreeHeaderPtr(beginPtr), getBlkSize(beginPtr)- FREE_HEADER_DATA_SIZE) && "Memory leak or ub");
 #endif
 
-	free(beginPtr);
+	freeMem(beginPtr);
 }
 
 inline bool AllocatorFreeListTree::isNIL(FreeHeaderData* blk) const noexcept
 {
 	return blk == &NIL;
+}
+
 }

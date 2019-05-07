@@ -27,21 +27,21 @@
     <ClInclude Include="AllocatorStack.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AllocatorPoolFreeList.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="AllocatorFreeList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AllocatorFreeListTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AllocatorPoolGrowFreeList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AllocatorPoolGrowSwap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="WoodenAllocators.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Allocator.cpp">
@@ -53,13 +53,16 @@
     <ClCompile Include="AllocatorStack.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AllocatorPoolFreeList.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AllocatorFreeList.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AllocatorFreeListTree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AllocatorPoolGrowFreeList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AllocatorPoolGrowSwap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

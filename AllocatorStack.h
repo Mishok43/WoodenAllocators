@@ -2,6 +2,8 @@
 
 #include "Allocator.h"
 
+namespace wal{
+
 class AllocatorStack : public Allocator
 {
 public:
@@ -9,12 +11,12 @@ public:
 
 	~AllocatorStack();
 
-	void init() override;
+	void init();
 
-	void* allocate(const size_t size, const size_t alignment = 0) override;
-	void free(void* ptr) override;
+	void* allocMem(const size_t size, const size_t alignment = 0);
+	void freeMem(void* ptr);
 
-	void reset() override;
+	void reset();
 
 private:
 	void* beginPtr = nullptr;
@@ -25,4 +27,6 @@ private:
 	uint32_t numChunks = 0;
 	uint32_t* sizeData = nullptr; // store the headers data separately for increasing # cache hits
 };
+
+}
 

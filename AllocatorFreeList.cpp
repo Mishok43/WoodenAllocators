@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "AllocatorFreeList.h"
 
+namespace wal{
+
 template<typename blkSizeType>
 AllocatorFreeList<blkSizeType>::AllocatorFreeList(const blkSizeType totalSize) :
 	Allocator(totalSize)
@@ -14,12 +16,11 @@ void AllocatorFreeList<blkSizeType>::init()
 }
 
 template<typename blkSizeType>
-void* AllocatorFreeList<blkSizeType>::allocate(const size_t blkSize/* =1 */, const size_t alignment /* = 0 */)
+void* AllocatorFreeList<blkSizeType>::allocMem(const size_t blkSize/* =1 */)
 {
 	blkSizeType neededSize;
 #if ALLOCATING_DEBUG
 	assert(blkSize <= sizeTotal);
-	assert(alignment == 0, "Alignment not supported!");
 #endif
 	neededSize = (blkSizeType)blkSize + ALLOCATED_HEADER_DATA_SIZE;
 
@@ -62,7 +63,7 @@ void* AllocatorFreeList<blkSizeType>::allocate(const size_t blkSize/* =1 */, con
 }
 
 template<typename blkSizeType>
-void AllocatorFreeList<blkSizeType>::free(void* ptr)
+void AllocatorFreeList<blkSizeType>::freeMem(void* ptr)
 {
 	AllocatedHeaderData* curPtr = (AllocatedHeaderData*)((char*)ptr - ALLOCATED_HEADER_DATA_SIZE);
 #if ALLOCATING_DEBUG
@@ -139,5 +140,7 @@ AllocatorFreeList<blkSizeType>::~AllocatorFreeList()
 	assert(hasOnlyDebugValue((char*)beginPtr + FREE_HEADER_DATA_SIZE, beginPtr->size - FREE_HEADER_DATA_SIZE) && "Memory leak or ub");
 #endif
 
-	free(beginPtr);
+	freeMem(beginPtr);
+}
+
 }

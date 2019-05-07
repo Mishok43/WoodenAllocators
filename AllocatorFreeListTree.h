@@ -1,18 +1,20 @@
 #pragma once
 #include "Allocator.h"
 
+namespace wal{
+
 class AllocatorFreeListTree: public Allocator
 {
 public:
 	AllocatorFreeListTree(const uint32_t totalSize);
 	~AllocatorFreeListTree();
 
-	void init() override;
+	void init();
 
-	void* allocate(const size_t blkSize = 1, const size_t alignment = 0) override;
-	void free(void* ptr) override;
+	void* allocMem(const size_t blkSize = 1);
+	void freeMem(void* ptr);
 
-	void reset() override;
+	void reset();
 private:
 	struct FreeHeaderData;
 
@@ -64,3 +66,4 @@ private:
 };
 
 
+}
