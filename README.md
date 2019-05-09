@@ -7,10 +7,10 @@ WoodenAllocators - library with basic types of implemented allocators.
 3. Linear allocator
 4. ObjectPool with Freelist allocator
 5. Debug validation of data for detecting memory leakage and preventing undefined behaviour
+6. General linked list allocator
+7. General linked list allocator using auto-balancing RB-tree 
 
 <b> Not implemented </b>:
-1. General linked list allocator
-2. General linked list allocator using auto-balancing binary trees (such Red-Black Tree, B-Tree)
-3. Added staticsts collector for debuging allocators
-4. Agregator allocator
-5. Bucket allocator
+1. Added staticsts collector for debuging allocators
+2. Agregator allocator
+3. Bucket allocator
