@@ -14,3 +14,6 @@ WoodenAllocators - library with basic types of implemented allocators.
 1. Added staticsts collector for debuging allocators
 2. Agregator allocator
 3. Bucket allocator
+
+<b> Unit-tests </b>:
+Not implemented yet
