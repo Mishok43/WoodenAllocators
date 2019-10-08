@@ -14,8 +14,38 @@ public:
 	void init(size_t blkSize, size_t numBlocks, size_t alignment=0);
 	void init();
 
-	void resize(size_t numBlks);
-	void* allocMem(const size_t numBlocks=1, const size_t alignment = 0);
+	template<typename T>
+	inline void resize(size_t newNumBlocks)
+	{
+		size_t tmpSizeTotal = newNumBlocks * blkSize;
+		void* tmpBeginPtr = alignedChunkAlloc(alignment, tmpSizeTotal);
+		for (uint32_t i = 0; i < numBlks; i++)
+		{
+			void* m = reinterpret_cast<void*>((char*)tmpBeginPtr + blkSize * i);
+			new (m)T(std::move(((T*)beginPtr)[i]));
+		}
+		//std::memcpy(tmpBeginPtr, beginPtr, sizeTotal);
+		alignedChunkFree(beginPtr);
+
+		beginPtr = tmpBeginPtr;
+		numBlks = newNumBlocks;
+		sizeTotal = tmpSizeTotal;
+	}
+
+	template<typename T=char>
+	inline T* allocMem(const size_t numAllocatingBlocks =1, const size_t alignment = 0)
+	{
+		if (numUsedBlocks + numAllocatingBlocks > numBlks)
+		{
+			resize<T>(numBlks * 2);
+		}
+
+		if (numAllocatingBlocks == 1)
+		{
+			return reinterpret_cast<T*>((char*)beginPtr + blkSize * (numUsedBlocks++));
+		}
+	}
+
 	size_t freeMem(void* ptr);
 
 	void reset();
@@ -41,6 +71,10 @@ public:
 
 	inline const void* data() const { return beginPtr; }
 
+	size_t getAlignment() const
+	{
+		return alignment;
+	}
 private:
 	size_t blkSize;
 	size_t numBlks;

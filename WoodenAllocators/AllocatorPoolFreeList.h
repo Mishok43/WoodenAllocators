@@ -27,7 +27,7 @@ public:
 	inline size_t getNumBlks() const noexcept {return numBlks; }
 
 	template<typename T=char>
-	inline T* get(size_t pos) { return *((T*)beginPtr)[pos]; }
+	inline T* get(size_t pos) { return &((T*)beginPtr)[pos]; }
 
 	template<typename T =char>
 	inline const T* get(size_t pos) const { return *((T*)beginPtr)[pos];}
@@ -43,7 +43,7 @@ public:
 	inline const void* data() const { return beginPtr;}
 private:
 	void* beginPtr;
-	void** rootFreePtr;
+	uint32_t* rootFreePtr;
 
 	size_t blkSize;
 	size_t numBlks;

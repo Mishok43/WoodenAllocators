@@ -18,7 +18,7 @@ void* AllocatorLinear::allocMem(const size_t size, const size_t alignment /* = 0
 {
 	size_t padding = (alignment > 0 ) ? computePadding((uintptr_t)curPtr, alignment): 0; // use bitwise and operator for fast mode, because alignment should be power of 2 
 	
-	if ((uintptr_t)(curPtr) + padding + size > (uintptr_t)(beginPtr) + sizeUsed)
+	if ((uintptr_t)(curPtr) + padding + size > (uintptr_t)(beginPtr) +sizeTotal)
 	{
 		return nullptr; 
 	}

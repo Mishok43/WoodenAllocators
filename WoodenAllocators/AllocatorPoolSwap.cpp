@@ -28,18 +28,7 @@ void AllocatorPoolSwap::init()
 	reset();
 }
 
-void* AllocatorPoolSwap::allocMem(const size_t numAllocatingBlocks /* = 1 */, const size_t alignment /* = 0 */)
-{
-	if (numUsedBlocks + numAllocatingBlocks > numBlks)
-	{
-		resize(numBlks * 2);
-	}
 
-	if (numAllocatingBlocks == 1)
-	{
-		return (char*)beginPtr + blkSize*numUsedBlocks++;
-	}
-}
 
 size_t AllocatorPoolSwap::freeMem(void* ptr)
 {
@@ -61,18 +50,7 @@ size_t AllocatorPoolSwap::freeMem(void* ptr)
 	return iSwap;
 }
 
-// NOT SAFE
-void AllocatorPoolSwap::resize(size_t newNumBlocks)
-{
-	size_t tmpSizeTotal = newNumBlocks * blkSize;
-	void* tmpBeginPtr = alignedChunkAlloc(alignment, tmpSizeTotal);
-	std::memcpy(tmpBeginPtr, beginPtr, sizeTotal);
-	alignedChunkFree(beginPtr);
-	
-	beginPtr = tmpBeginPtr;
-	numBlks = newNumBlocks;
-	sizeTotal = tmpSizeTotal;
-}
+
 
 void AllocatorPoolSwap::reset()
 {
@@ -87,7 +65,7 @@ void AllocatorPoolSwap::reset()
 AllocatorPoolSwap::~AllocatorPoolSwap()
 {
 #if ALLOCATING_DEBUG
-	assert(numUsedBlocks == 0 && "Memory leakage!");
+	//	assert(numUsedBlocks == 0 && "Memory leakage!");
 #endif
 
 	alignedChunkFree(beginPtr);

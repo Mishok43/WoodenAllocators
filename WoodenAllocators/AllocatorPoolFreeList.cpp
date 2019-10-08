@@ -3,11 +3,12 @@
 
 namespace wal{
 
-AllocatorPoolFreeList::AllocatorPoolFreeList()
+AllocatorPoolFreeList::AllocatorPoolFreeList():
+	rootFreePtr(nullptr)
 {}
 
 AllocatorPoolFreeList::AllocatorPoolFreeList(size_t blkSize, size_t numBlocks, size_t alignment) :
-	Allocator(blkSize*numBlocks), blkSize(blkSize), numBlks(numBlocks), alignment(alignment)
+	Allocator(blkSize*numBlocks), blkSize(blkSize), numBlks(numBlocks), alignment(alignment), rootFreePtr(nullptr)
 {
 }
 
@@ -15,7 +16,6 @@ void AllocatorPoolFreeList::init(size_t _blkSize, size_t _numBlocks, size_t _ali
 {
 	blkSize = _blkSize; numBlks = _numBlocks; alignment = _alignment;
 	sizeTotal = blkSize * numBlks;
-
 	init();
 }
 
@@ -45,7 +45,7 @@ void* AllocatorPoolFreeList::allocMem(const size_t numAllocatingBlocks /* = 1 */
 		++numUsedBlocks;
 
 		void* allocatedPtr = rootFreePtr;
-		rootFreePtr = (void**)(*rootFreePtr);
+		rootFreePtr =  (uint32_t*)((char*)beginPtr+(*rootFreePtr));
 		return allocatedPtr;
 	}
 	else
@@ -56,15 +56,9 @@ void* AllocatorPoolFreeList::allocMem(const size_t numAllocatingBlocks /* = 1 */
 
 void AllocatorPoolFreeList::freeMem(void* ptr)
 {
-#if ALLOCATING_DEBUG
-	assert(ptr != nullptr);
-	assert(!hasOnlyDebugValue(ptr, blkSize), "Attempt to free deleted block yet");
-	setDebugValue(ptr, blkSize);
 
-#endif
-
-	*(void**)ptr = rootFreePtr;
-	rootFreePtr = (void**)ptr;
+	*(uint32_t*)ptr = getPos(rootFreePtr)*blkSize;
+	rootFreePtr = (uint32_t*)ptr;
 	--numUsedBlocks;
 }
 
@@ -75,6 +69,21 @@ void AllocatorPoolFreeList::resize(size_t newNumBlocks)
 	void* tmpBeginPtr = alignedChunkAlloc(alignment, tmpSizeTotal);
 	std::memcpy(tmpBeginPtr, beginPtr, sizeTotal);
 	alignedChunkFree(beginPtr);
+
+	void* splitPtr = (char*)tmpBeginPtr + sizeTotal;
+	// initialize linked list
+	void* curPtr = splitPtr;
+
+	uint32_t offset = sizeTotal;
+	for (size_t i = 0; i < newNumBlocks-numBlks - 1; ++i)
+	{
+		offset += blkSize;
+		void* nextPtr = (char*)curPtr + blkSize;
+		*((uint32_t*)curPtr) = offset;
+		curPtr = nextPtr;
+	}
+	*((uint32_t*)curPtr) = (uint32_t)-1; // fill the last block
+	rootFreePtr = (uint32_t*)splitPtr;
 	
 	beginPtr = tmpBeginPtr;
 	numBlks = newNumBlocks;
@@ -85,28 +94,22 @@ void AllocatorPoolFreeList::reset()
 {
 	void* curPtr = beginPtr;
 	// initialize linked list
+	uint32_t offset = 0;
 	for (size_t i = 0; i < numBlks - 1; ++i)
 	{
+		offset += blkSize;
 		void* nextPtr = (char*)curPtr + blkSize;
-		*((void**)curPtr) = nextPtr;
+		*((uint32_t*)curPtr) = offset;
 		curPtr = nextPtr;
 	}
 
-	*((void**)curPtr) = nullptr; // fill the last block
+	*((uint32_t*)curPtr) = (uint32_t)-1; // fill the last block
 
-	rootFreePtr = (void**)curPtr;
-
-#if ALLOCATING_DEBUG
-	setDebugValue(beginPtr, numBlks*blkSize);
-	numUsedBlocks = 0;
-#endif
+	rootFreePtr = (uint32_t*)beginPtr;
 }
 
 AllocatorPoolFreeList::~AllocatorPoolFreeList()
 {
-#if ALLOCATING_DEBUG
-	assert(numUsedBlocks == 0 && "Memory leakage!");
-#endif
 
 	alignedChunkFree(beginPtr);
 }
